@@ -8,6 +8,8 @@
 #define OLED_DC 9
 #define OLED_RESET 8
 
+bool isScreensaver = false;
+
 // Initialize the display object with the screen dimensions and pins
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET, OLED_CS);
 
@@ -19,7 +21,7 @@ int CDX = 1; // C x dir
 int CDY = 1; // C y dir
 
 const unsigned char chickenBitmap[] PROGMEM = {
-0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x70, 0x7f, 0x00, 0x00, 0xf0, 
+  0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x70, 0x7f, 0x00, 0x00, 0xf0, 
 	0x5f, 0x80, 0x01, 0xf0, 0xff, 0x80, 0x07, 0xa0, 0xff, 0xc0, 0x0a, 0xe0, 0xbf, 0xc0, 0x1f, 0xa0, 
 	0x2f, 0xc1, 0xff, 0xe0, 0x0f, 0xe7, 0xff, 0x40, 0x0f, 0xff, 0xff, 0xc0, 0x0f, 0xff, 0xff, 0xc0, 
 	0x0f, 0xff, 0xff, 0xc0, 0x07, 0xff, 0xff, 0x80, 0x07, 0xfb, 0xdb, 0xc0, 0x07, 0xff, 0x7f, 0xc0, 
@@ -29,16 +31,19 @@ const unsigned char chickenBitmap[] PROGMEM = {
 	0x00, 0x05, 0xf0, 0x00, 0x00, 0x1f, 0x00, 0x00
 };
 
-// Function to display the screensaver text
-void drawScreensaver() {
+void drawPechka(bool isScreensaver) {
   display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(10, 20);
   display.print("Pechka");
-  display.setTextSize(1);
-  display.setCursor(55, 35);
-  display.print("Screensaver");
+
+  if (isScreensaver) {
+    display.setTextSize(1);
+    display.setCursor(55, 35);
+    display.print("Screensaver");
+  }
+
   display.display();
 }
 
@@ -48,67 +53,44 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;);
   }
+
   // Clear the display and display nothing
   display.clearDisplay();
   display.display();
 }
 
 void loop() {
-  // Main screen time
-  int mst = random(200, 400);
-  for (int i = 0; i < mst; i++) {
-    // Update the chicken position based on its direction
-    CX += CDX;
-    CY += CDY;
-    // Reverse the direction if the chicken hits a screen edge
-    if (CX <= 0 || CX + CW >= SCREEN_WIDTH) {
-      CDX = -CDX;
-    }
-    if (CY <= 0 || CY + CH >= SCREEN_HEIGHT) {
-      CDY = -CDY;
-    }
-    // Draw the chicken bitmap at its current position
+  // Display Pechka text before entering screensaver phase
+  drawPechka(false);
+
+  // Screensaver time
+  isScreensaver = true;
+  for (int i = 0; i < 3; i++) {
+    drawPechka(isScreensaver);
+    delay(1000);
     display.clearDisplay();
-    display.drawBitmap(CX, CY, chickenBitmap, CW, CH, WHITE);
     display.display();
-    delay(10);
+    delay(1000);
   }
-  // Text phase
+
+  // Chicken phase
+const int chickenDelay = 20; // Increase delay to make chicken move slower
+for (int i = 0; i <= 900; i++) {
+  // Update the chicken position based on its direction
+  CX += CDX;
+  CY += CDY;
+
+  // Reverse the direction if the chicken hits a screen edge
+  if (CX <= 0 || CX + CW >= SCREEN_WIDTH) {
+    CDX = -CDX;
+  }
+  if (CY <= 0 || CY + CH >= SCREEN_HEIGHT) {
+    CDY = -CDY;
+  }
+
+  // Draw the chicken bitmap at its current position
   display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(20, 20);
-  display.print("Pechka");
-  display.setTextSize(1);
-  display.setCursor(55, 35);
-  display.print("Screensaver");
+  display.drawBitmap(CX, CY, chickenBitmap, CW, CH, WHITE);
   display.display();
-  delay(2000);
-  // Animate Pechka word to the right edge
-  for (int i = 0; i < 6; i++) {
-    display.clearDisplay();
-    display.setTextSize(2);
-    display.setTextColor(WHITE);
-    display.setCursor(20 - i * 3, 20);
-    display.print("Pechka"[i]);
-    display.setTextSize(1);
-    display.setCursor(55, 35);
-    display.print("Screensaver");
-    display.display();
-    delay(100);
+  delay(chickenDelay); // Use the new delay
   }
-  // Animate Screensaver word to the left edge
-  for (int i = 0; i < 10; i++) {
-    display.clearDisplay();
-    display.setTextSize(2);
-    display.setTextColor(WHITE);
-    display.setCursor(20 + i * 3, 20);
-    display.print("Screensaver"[i]);
-    display.setTextSize(1);
-    display.setCursor(55, 35);
-    display.print("Screensaver");
-    display.display();
-    delay(100);
-  }
-  delay(2000);
-}
