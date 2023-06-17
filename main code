@@ -1,27 +1,25 @@
 #include <Adafruit_SSD1306.h>
 #include <splash.h>
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 
 #define OLED_CS 10
 #define OLED_DC 9
 #define OLED_RESET 8
 
+// Initialize the display object with the screen dimensions and pins
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET, OLED_CS);
 
-// Define the size and position of the chicken
-const int CHICKEN_WIDTH = 28;
-const int CHICKEN_HEIGHT = 30;
-int chickenX = 0;
-int chickenY = 0;
-int chickenDX = 1;
-int chickenDY = 1;
+const int CW = 28; // Ch w
+const int CH = 30; // Ch h
+int CX = 0; // C x pos
+int CY = 0; // C y pos
+int CDX = 1; // C x dir
+int CDY = 1; // C y dir
 
-// Define the chicken bitmap
 const unsigned char chickenBitmap[] PROGMEM = {
-
-0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x70, 0x7f, 0x00, 0x00, 0xf0, 
+  0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x70, 0x7f, 0x00, 0x00, 0xf0, 
 	0x5f, 0x80, 0x01, 0xf0, 0xff, 0x80, 0x07, 0xa0, 0xff, 0xc0, 0x0a, 0xe0, 0xbf, 0xc0, 0x1f, 0xa0, 
 	0x2f, 0xc1, 0xff, 0xe0, 0x0f, 0xe7, 0xff, 0x40, 0x0f, 0xff, 0xff, 0xc0, 0x0f, 0xff, 0xff, 0xc0, 
 	0x0f, 0xff, 0xff, 0xc0, 0x07, 0xff, 0xff, 0x80, 0x07, 0xfb, 0xdb, 0xc0, 0x07, 0xff, 0x7f, 0xc0, 
@@ -31,76 +29,55 @@ const unsigned char chickenBitmap[] PROGMEM = {
 	0x00, 0x05, 0xf0, 0x00, 0x00, 0x1f, 0x00, 0x00
 };
 
-void drawPechkaScreensaver() {
-  // Clear the display buffer
+// Function to display the screensaver text
+void drawScreensaver() {
   display.clearDisplay();
-
-  // Draw "Pechka" text
-  display.setTextSize(2); // Set text size to 2
-  display.setTextColor(WHITE); // Set text color to white
-  display.setCursor(10, 20); // Set cursor position
-  display.print("Pechka"); // Print "Pechka" text
-
-  // Draw "Screensaver" text
-  display.setTextSize(1); // Set text size to 1
-  display.setCursor(55, 35); // Set cursor position
-  display.print("Screensaver"); // Print "Screensaver" text
-
-  // Update the display
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(10, 20);
+  display.print("Pechka");
+  display.setTextSize(1);
+  display.setCursor(55, 35);
+  display.print("Screensaver");
   display.display();
 }
 
 void setup() {
-  // Initialize the OLED display
-  if(!display.begin(SSD1306_SWITCHCAPVCC)) {
+  // Initialize the display and check for errors
+  if (!display.begin(SSD1306_SWITCHCAPVCC)) {
     Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
+    for (;;);
   }
-
-  // Clear the display buffer
+  // Clear the display and display nothing
   display.clearDisplay();
   display.display();
 }
 
 void loop() {
-  // Generate a random number between 20 and 40
-  int mainScreenTime = random(2000, 4000);
-
-  // Loop for the main screen time
-  for (int i = 0; i < mainScreenTime; i++) {
-    // Move the chicken
-    chickenX += chickenDX;
-    chickenY += chickenDY;
-
-    // Check if the chicken has hit the edges of the screen
-    if (chickenX <= 0 || chickenX + CHICKEN_WIDTH >= SCREEN_WIDTH) {
-      chickenDX = -chickenDX; // Reverse the X direction
+  // Main screen time
+  int mst = random(200, 400);
+  for (int i = 0; i < mst; i++) {
+    // Update the chicken position based on its direction
+    CX += CDX;
+    CY += CDY;
+    // Reverse the direction if the chicken hits a screen edge
+    if (CX <= 0 || CX + CW >= SCREEN_WIDTH) {
+      CDX = -CDX;
     }
-    if (chickenY <= 0 || chickenY + CHICKEN_HEIGHT >= SCREEN_HEIGHT) {
-      chickenDY = -chickenDY; // Reverse the Y direction
+    if (CY <= 0 || CY + CH >= SCREEN_HEIGHT) {
+      CDY = -CDY;
     }
-
-    // Clear the display buffer
+    // Draw the chicken bitmap at its current position
     display.clearDisplay();
-
-    // Draw the chicken
-    display.drawBitmap(chickenX, chickenY, chickenBitmap, CHICKEN_WIDTH, CHICKEN_HEIGHT, WHITE);
-
-    // Update the display
+    display.drawBitmap(CX, CY, chickenBitmap, CW, CH, WHITE);
     display.display();
-
-    // Add a small delay to slow down the animation
     delay(10);
   }
-
-  // Generate a random number between 5 and 7
-  int screensaverTime = random(500, 800);
-
-  // Loop for the screensaver time
-  for (int i = 0; i < screensaverTime; i++) {
-    drawPechkaScreensaver();
-
-    // Add a small delay to slow down the animation
+  // Screensaver time
+  int sst = random(100, 300);
+  for (int i = 0; i < sst; i++) {
+    // Display the screensaver text
+    drawScreensaver();
     delay(10);
   }
 }
