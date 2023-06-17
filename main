@@ -1,0 +1,158 @@
+#include <Adafruit_SSD1306.h>
+#include <splash.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define OLED_CS 10
+#define OLED_DC 9
+#define OLED_RESET 8
+
+bool isScreensaver = false;
+
+// Initialize the display object with the screen dimensions and pins
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET, OLED_CS);
+
+const int CW = 28; // Ch w
+const int CH = 30; // Ch h
+int CX = 0; // C x pos
+int CY = 0; // C y pos
+int CDX = 1; // C x dir
+int CDY = 1; // C y dir
+
+// Seed object
+const int seedSize = 2; // Seed size
+int seedX = 20; // Seed x pos
+int seedY = 20; // Seed y pos
+int seedDX = 1; // Seed x dir
+int seedDY = 1; // Seed y dir
+bool seedHasMoved = false; // Boolean to track if the seed has moved
+
+const unsigned char chickenBitmap[] PROGMEM = {
+  //bitmap here// 
+};
+
+void drawPechka(bool isScreensaver) {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(10, 20);
+  display.print("Pechka");
+
+  if (isScreensaver) {
+    display.setTextSize(1);
+    display.setCursor(55, 35);
+    display.print("Screensaver");
+  }
+
+  display.display();
+}
+
+void updateSeedPosition() {
+  // Update the seed position based on its direction
+  seedX += seedDX;
+  seedY += seedDY;
+
+  // Reverse the direction if the seed hits a screen edge
+  if (seedX <= 0 || seedX + seedSize >= SCREEN_WIDTH) {
+    seedDX = -seedDX;
+  }
+  if (seedY <= 0 || seedY + seedSize >= SCREEN_HEIGHT) {
+    seedDY = -seedDY;
+  }
+}
+
+void drawSeed() {
+  // Draw the seed at its current position
+  display.drawPixel(seedX, seedY, WHITE);
+  display.drawPixel(seedX, seedY + seedSize - 1, WHITE);
+  display.drawPixel(seedX + seedSize - 1, seedY, WHITE);
+  display.drawPixel(seedX + seedSize - 1, seedY + seedSize - 1, WHITE);
+}
+
+void checkSeedQuarters() {
+  // Check if the seed has moved yet, if not, check if the chicken is in the same quarter
+  if (!seedHasMoved) {
+    if (seedX <= SCREEN_WIDTH / 2 && seedY <= SCREEN_HEIGHT / 2) {
+      if (CX <= SCREEN_WIDTH / 2 && CY <= SCREEN_HEIGHT / 2) {
+        seedX = SCREEN_WIDTH - seedX - seedSize;
+        seedY = SCREEN_HEIGHT - seedY - seedSize;
+        seedDX = -seedDX;
+        seedDY = -seedDY;
+        seedHasMoved = true; // Set the boolean to true
+      }
+    } else if (seedX <= SCREEN_WIDTH / 2 && seedY > SCREEN_HEIGHT / 2) {
+      if (CX <= SCREEN_WIDTH / 2 && CY > SCREEN_HEIGHT / 2) {
+        seedX = SCREEN_WIDTH - seedX - seedSize;
+        seedDY = -seedDY;
+        seedHasMoved = true; // Set the boolean to true
+      }
+    } else if (seedX > SCREEN_WIDTH / 2 && seedY <= SCREEN_HEIGHT / 2) {
+      if (CX > SCREEN_WIDTH / 2 && CY <= SCREEN_HEIGHT / 2) {
+        seedY = SCREEN_HEIGHT - seedY - seedSize;
+        seedDX = -seedDX;
+        seedHasMoved = true; // Set the boolean to true
+      }
+    } else if (seedX > SCREEN_WIDTH / 2 && seedY > SCREEN_HEIGHT / 2) {
+      if (CX > SCREEN_WIDTH / 2 && CY > SCREEN_HEIGHT / 2) {
+        seedDX = -seedDX;
+        seedDY = -seedDY;
+        seedHasMoved = true; // Set the boolean to true
+      }
+    }
+  }
+}
+
+void setup() {
+  // Initialize the display and check for errors
+  if (!display.begin(SSD1306_SWITCHCAPVCC)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;);
+  }
+
+  // Clear the display and display nothing
+  display.clearDisplay();
+  display.display();
+}
+
+void loop() {
+  // Display Pechka text before entering screensaver phase
+  drawPechka(false);
+
+  // Screensaver time
+  isScreensaver =true;
+  for (int i = 0; i < 3; i++) {
+    drawPechka(isScreensaver);
+    delay(1000);
+    display.clearDisplay();
+    display.display();
+    delay(1000);
+  }
+
+  // Chicken phase
+  const int chickenDelay = 20; // Increase delay to make chicken move slower
+  for (int i = 0; i <= 900; i++) {
+    // Update the chicken and seed positions
+    CX += CDX;
+    CY += CDY;
+    updateSeedPosition();
+
+    // Check if the seed needs to change direction based on chicken position
+    checkSeedQuarters();
+
+    // Reverse the direction if the chicken hits a screen edge
+    if (CX <= 0 || CX + CW >= SCREEN_WIDTH) {
+      CDX = -CDX;
+    }
+    if (CY <= 0 || CY + CH >= SCREEN_HEIGHT) {
+      CDY = -CDY;
+    }
+
+    // Draw the chicken and seed bitmaps at their current positions
+    display.clearDisplay();
+    display.drawBitmap(CX, CY, chickenBitmap, CW, CH, WHITE);
+    drawSeed();
+    display.display();
+    delay(chickenDelay); // Use the new delay
+  }
+}
